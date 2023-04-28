@@ -12,12 +12,12 @@ import (
 )
 
 type Article struct {
-	Guid      ArticleGuid `xml:"guid"`
-	Link      string      `xml:"link"`
-	Title     string      `xml:"title"`
-	Content   string      `xml:"content"`
-	Author    Author      `xml:"author"`
-	CreatedAt time.Time   `xml:"pubDate"`
+	Guid        ArticleGuid `xml:"guid"`
+	Link        string      `xml:"link"`
+	Title       string      `xml:"title"`
+	Description string      `xml:"description"`
+	Author      Author      `xml:"author"`
+	CreatedAt   time.Time   `xml:"pubDate"`
 }
 
 type ArticleGuid struct {
@@ -85,7 +85,7 @@ func main() {
 		}
 
 		article.Title = e.ChildText(".hero-section>.entry-header>.page-title")
-		article.Content = e.ChildText(".entry-content>p")
+		article.Description = e.ChildText(".entry-content>p")
 		article.Link = fmt.Sprintf("https://ict-flex.nl/%s", slug.Make(article.Title))
 	})
 
@@ -96,7 +96,7 @@ func main() {
 	}
 
 	buffer := new(bytes.Buffer)
-	buffer.WriteString("<rss xmlns:atom=\"http://www.w3.org/2005/Atom\" verion=\"2.0\">\n")
+	buffer.WriteString("<rss xmlns:atom=\"http://www.w3.org/2005/Atom\" version=\"2.0\">\n")
 
 	encoder := xml.NewEncoder(buffer)
 	encoder.Indent("", "\t")
