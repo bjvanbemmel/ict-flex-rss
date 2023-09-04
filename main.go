@@ -5,17 +5,28 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
-    . "github.com/bjvanbemmel/ict-flex-rss/types"
+	. "github.com/bjvanbemmel/ict-flex-rss/types"
 	"github.com/gocolly/colly/v2"
 	"github.com/gosimple/slug"
+)
+
+const (
+	POST_ID_EXPR string = "(post-[0-9]+)"
+)
+
+var (
+	post_regex *regexp.Regexp = regexp.MustCompile(POST_ID_EXPR)
 )
 
 func main() {
 	c := colly.NewCollector()
 
-	c.OnHTML("div.entries", func(e *colly.HTMLElement) {
+	c.OnHTML("div.elementor-posts", func(e *colly.HTMLElement) {
 		e.ForEach("article", func(_ int, e *colly.HTMLElement) {
 			var article Article = Article{
 				Guid: ArticleGuid{
@@ -23,40 +34,55 @@ func main() {
 				},
 			}
 
-			article.Guid.Id = e.Attr("id")
-			article.Author.Name = e.ChildText(".entry-meta>.meta-author>a>span")
-			article.Author.Profile = e.ChildAttr(".entry-meta>.meta-author>a", "href")
+			classes := e.Attr("class")
+			post := post_regex.FindString(classes)
+			if post == "" {
+				return
+			}
+			article.Guid.Id = strings.Split(post, "-")[1]
 
-			var date string = e.ChildAttr(".entry-meta>.meta-date>time", "datetime")
-			article.CreatedAt, _ = time.Parse(time.RFC3339, date)
+			var rawDate string = e.ChildText(".elementor-post__card>.elementor-post__meta-data>span") //.entry-meta>.meta-date>time", "datetime
+
+			var err error
+			article.CreatedAt, err = getDateFromNaturalLanguage(rawDate)
+			if err != nil {
+				return
+			}
 
 			ArticleFeed.Articles = append(ArticleFeed.Articles, &article)
 
-			e.Request.Visit(e.ChildAttr(".entry-title>a", "href"))
+			e.Request.Visit(e.ChildAttr(".elementor-post__card>.elementor-post__text>.elementor-post__title>a", "href"))
 		})
 	})
 
-	c.OnHTML("article.type-post", func(e *colly.HTMLElement) {
-		if hero := e.ChildText("div.hero-section"); hero == "" {
+	c.OnHTML("main.post", func(e *colly.HTMLElement) {
+		// if hero := e.ChildText("div.hero-section"); hero == "" {
+		// 	return
+		// }
+
+		classes := e.Attr("class")
+		post := post_regex.FindString(classes)
+		if post == "" {
 			return
 		}
+		id := strings.Split(post, "-")[1]
 
 		var article *Article
 
 		for _, art := range ArticleFeed.Articles {
-			if art.Guid.Id != e.Attr("id") {
+			if art.Guid.Id != id {
 				continue
 			}
 
 			article = art
 		}
 
-		article.Title = e.ChildText(".hero-section>.entry-header>.page-title")
-		article.Description = e.ChildText(".entry-content>p")
+		article.Title = e.ChildText(".page-header>.entry-title")
+		article.Description = e.ChildText(".page-content>p")
 		article.Link = fmt.Sprintf("https://ict-flex.nl/%s", slug.Make(article.Title))
 	})
 
-	if err := c.Visit("https://ict-flex.nl/category/mededelingen/"); err != nil {
+	if err := c.Visit("https://ict-flex.nl/mededelingen/"); err != nil {
 		log.Fatal(err)
 
 		return
@@ -78,4 +104,52 @@ func main() {
 	buffer.WriteString("</rss>")
 
 	fmt.Println(buffer)
+}
+
+// This entire function is incredibly cursed but Go simply lacks the language features
+// to do this somewhat relatively cleanly.
+func getDateFromNaturalLanguage(date string) (time.Time, error) {
+	dateFields := strings.Split(date, " ")
+
+	day, err := strconv.Atoi(dateFields[0])
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	naturalMonth := dateFields[1]
+
+	year, err := strconv.Atoi(dateFields[2])
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	var month int
+	switch naturalMonth {
+	case "Januari":
+		month = 1
+	case "Februari":
+		month = 2
+	case "Maart":
+		month = 3
+	case "April":
+		month = 4
+	case "Mei":
+		month = 5
+	case "Juni":
+		month = 6
+	case "Juli":
+		month = 7
+	case "Augustus":
+		month = 8
+	case "September":
+		month = 9
+	case "Oktober":
+		month = 10
+	case "November":
+		month = 11
+	case "December":
+		month = 12
+	}
+
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC), err
 }

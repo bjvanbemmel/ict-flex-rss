@@ -35,6 +35,6 @@ type Feed struct {
 var ArticleFeed Feed = Feed{
 	Articles:    []*Article{},
 	Title:       "ICT-Flex - Announcements",
-	Link:        "https://ict-flex.nl/category/mededelingen/",
+	Link:        "https://ict-flex.nl/mededelingen/",
 	Description: "RSS Feed for ICT-Flex announcements",
 }
