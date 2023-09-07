@@ -10,18 +10,13 @@ type Article struct {
 	Link        string      `xml:"link"`
 	Title       string      `xml:"title"`
 	Description string      `xml:"description"`
-	Author      Author      `xml:"author"`
+	Author      string      `xml:"author"`
 	CreatedAt   time.Time   `xml:"pubDate"`
 }
 
 type ArticleGuid struct {
 	Id          string `xml:",chardata"`
 	IsPermaLink bool   `xml:"isPermaLink,attr"`
-}
-
-type Author struct {
-	Name    string `xml:"name"`
-	Profile string `xml:"profile"`
 }
 
 type Feed struct {
