@@ -15,7 +15,7 @@ import (
 
 const (
 	POST_ID_EXPR string = "(post-[0-9]+)"
-	DATE_FORMAT     = "2006-01-02T15:04:05+00:00"
+	DATE_FORMAT         = "2006-01-02T15:04:05+00:00"
 )
 
 var (
@@ -24,49 +24,50 @@ var (
 
 func main() {
 	c := colly.NewCollector()
+	c.UserAgent = "This is the ICT-Flex-RSS scraper. I come in peace. The generated RSS feed can be found at https://rss.bjvanbemmel.nl/ict-flex."
 
-    c.OnHTML("html", func(e *colly.HTMLElement) {
-        nodes := e.DOM.Children().Find("body>main#content.type-post").Nodes
+	c.OnHTML("html", func(e *colly.HTMLElement) {
+		nodes := e.DOM.Children().Find("body>main#content.type-post").Nodes
 
-        if len(nodes) < 1 {
-            return
-        }
+		if len(nodes) < 1 {
+			return
+		}
 
-        var article Article
+		var article Article
 
-        e.ForEach("head>meta[property]", func(_ int, e *colly.HTMLElement) {
-            content := e.Attr("content")
+		e.ForEach("head>meta[property]", func(_ int, e *colly.HTMLElement) {
+			content := e.Attr("content")
 
-            switch e.Attr("property") {
-            case "og:url":
-                article.Link = content
-            case "og:title":
-                article.Title = content
-            case "og:description":
-                article.Description = content
-            case "article:published_time":
-                date, err := time.Parse(DATE_FORMAT, content)
-                if err != nil {
-                    log.Fatal(err)
-                    return
-                }
-                article.CreatedAt = date
-            }
-        })
+			switch e.Attr("property") {
+			case "og:url":
+				article.Link = content
+			case "og:title":
+				article.Title = content
+			case "og:description":
+				article.Description = content
+			case "article:published_time":
+				date, err := time.Parse(DATE_FORMAT, content)
+				if err != nil {
+					log.Fatal(err)
+					return
+				}
+				article.CreatedAt = date
+			}
+		})
 
-        var id string
-        post := post_regex.FindString(e.ChildAttr("main#content", "class"))
-        if post == "" {
-            log.Println("Post ID could not be found")
-        } else {
-            id = strings.Split(post, "-")[1]
-        }
+		var id string
+		post := post_regex.FindString(e.ChildAttr("main#content", "class"))
+		if post == "" {
+			log.Println("Post ID could not be found")
+		} else {
+			id = strings.Split(post, "-")[1]
+		}
 
-        article.Guid.Id = id
-        article.Author = e.ChildAttr("head>meta[name='twitter:data1']", "content")
+		article.Guid.Id = id
+		article.Author = e.ChildAttr("head>meta[name='twitter:data1']", "content")
 
-        ArticleFeed.Articles = append(ArticleFeed.Articles, &article)
-    })
+		ArticleFeed.Articles = append(ArticleFeed.Articles, &article)
+	})
 
 	c.OnHTML("div.elementor-posts", func(e *colly.HTMLElement) {
 		e.ForEach("article", func(_ int, e *colly.HTMLElement) {
