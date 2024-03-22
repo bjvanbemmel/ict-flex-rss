@@ -10,7 +10,6 @@ type Article struct {
 	Link        string      `xml:"link"`
 	Title       string      `xml:"title"`
 	Description string      `xml:"description"`
-	Author      string      `xml:"author"`
 	CreatedAt   time.Time   `xml:"pubDate"`
 }
 
